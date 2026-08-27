@@ -1,0 +1,37 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Spring Boot
+spring-pid
+
+# Credentials — never commit these
+.env
+*.env
+
+# Kiro AI workspace files (local only)
+.kiro/
+
+# Personal prep / talk material (local only — not part of the codebase)
+TALKING-POINTS.md
+YOUTUBE-SHORT-SCRIPT.md
+ENGINEERING-CHALLENGES.md
