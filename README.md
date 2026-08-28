@@ -1,13 +1,27 @@
-# java-agent-patterns-demo
+# java-agent-patterns-demos
 
-> **Design Patterns for AI Agents — A Java Developer's Guide**
-> Demo: **Dynamic Tool Discovery** (the Tool Search Tool pattern)
+> **Design Patterns for AI Agents — A Java Developer's Guide** (Bangalore JUG)
 
-A Spring Boot app that shows how much context — and money — an AI agent wastes when it receives all its tools upfront, and how the **Tool Search Tool (TST)** pattern fixes it by letting the model discover tools on demand.
+Runnable Spring AI demos on **Amazon Bedrock** that accompany the talk. Each demo showcases one production pattern for building and shipping Java AI agents.
 
-Built with **Spring AI** on **Amazon Bedrock** (Claude Sonnet 4). Two endpoints, same prompt, same tools, measured side by side.
+## Demos in this repo
 
-> **Result on this demo: ~42% fewer tokens**, identical answer quality.
+| Demo | Folder | Pattern | Stack |
+|---|---|---|---|
+| **1. Dynamic Tool Discovery** | `/` (root) | Tool Search Tool — discover tools on demand instead of sending all upfront | Spring Boot 3.5 / Spring AI 1.1.2 (Maven) |
+| **2. One-Click Deploy** | [`agentcore-deploy/`](agentcore-deploy/) | `@AgentCoreInvocation` — a plain Spring AI agent, deploy-ready for Amazon Bedrock AgentCore | Spring Boot 4.1 / Spring AI 2.0.0 (Gradle) |
+
+The two demos are **independent projects** on different stacks (the AgentCore SDK requires Spring Boot 4.x / Spring AI 2.0.0), so they live side by side rather than as one build. Demo 2 has its own [README](agentcore-deploy/README.md) and [run sheet](agentcore-deploy/DEMO.md).
+
+---
+
+# Demo 1 — Dynamic Tool Discovery (Tool Search Tool)
+
+Shows how much context — and money — an AI agent wastes when it receives all its tools upfront, and how the **Tool Search Tool (TST)** pattern fixes it by letting the model discover tools on demand.
+
+Two endpoints, same prompt, same tools, measured side by side.
+
+> **Result on this demo: ~40–60% fewer prompt tokens**, identical answer quality.
 
 ---
 
@@ -68,11 +82,11 @@ The baseline stays pinned at `Tools in scope (28)` on every round.
 | Spring AI | 1.1.2 |
 | tool-search-tool | 1.0.1 (`org.springaicommunity`) |
 | tool-searcher-lucene | 1.0.1 (`org.springaicommunity`) |
-
-> **Version note:** This uses the community 1.0.x line for Spring Boot 3. In Spring AI 2.0.0 GA the Tool Search Tool is now core — `org.springframework.ai:spring-ai-starter-tool-search-advisor` — enabled with a single `spring.ai.chat.client.tool-search-advisor.enabled=true` property (no manual advisor wiring needed).
 | Amazon Bedrock Converse | region `us-east-1` |
 | Model | `us.anthropic.claude-sonnet-4-20250514-v1:0` |
 | Port | 8085 |
+
+> **Version note:** Demo 1 uses the community 1.0.x line for Spring Boot 3. In Spring AI 2.0.0 GA the Tool Search Tool is now core — `org.springframework.ai:spring-ai-starter-tool-search-advisor` — enabled with a single `spring.ai.chat.client.tool-search-advisor.enabled=true` property (no manual advisor wiring needed).
 
 ---
 
@@ -120,13 +134,16 @@ Both accept an optional `{"prompt": "..."}` body. Omit it (or send `{}`) to use 
 ```json
 {
   "answer": "Based on the sunny 15°C weather...",
-  "totalTokens": 2177,
-  "promptTokens": 1877,
-  "completionTokens": 300,
-  "toolsInScope": ["..."],
+  "totalTokens": 7321,
+  "promptTokens": 6638,
+  "completionTokens": 683,
+  "requests": 6,
+  "toolsInScope": ["toolSearchTool", "weather", "currentTime", "clothing", "getOpeningHours"],
   "toolsCalled": ["..."]
 }
 ```
+
+> **On the numbers:** `totalTokens` is the **aggregate across all LLM rounds** (matching the Spring AI blog's methodology) — the true billed cost of the whole interaction, since each round resends conversation history. `requests` is the number of LLM round-trips. Compare TST vs. the all-tools baseline *within this demo* rather than against the blog's table (different models/accounts give different absolute numbers). `toolsInScope` is the distinct set of tools that ever entered context — far fewer than the 28 the baseline sends every round.
 
 ---
 
@@ -174,7 +191,7 @@ src/main/java/com/aws/jug/agentpatterns/
 
 ## About This Talk
 
-Part of **"Design Patterns for AI Agents — A Java Developer's Guide"** (Bangalore JUG). This repo is the **Dynamic Tool Discovery** demo. The talk also covers the Human-in-the-Loop (Ask Before Acting) pattern and one-click deployment with the Spring AI AgentCore SDK.
+Part of **"Design Patterns for AI Agents — A Java Developer's Guide"** (Bangalore JUG). This repo holds two runnable demos: **Dynamic Tool Discovery** (above) and **One-Click Deploy** with the Spring AI AgentCore SDK (see [`agentcore-deploy/`](agentcore-deploy/)). The talk also covers the Human-in-the-Loop (Ask Before Acting) pattern.
 
 ---
 
