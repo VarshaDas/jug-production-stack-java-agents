@@ -1,4 +1,4 @@
-# java-agent-patterns-demos
+# jug-production-stack-java-agents
 
 > **Design Patterns for AI Agents — A Java Developer's Guide** (Bangalore JUG)
 
