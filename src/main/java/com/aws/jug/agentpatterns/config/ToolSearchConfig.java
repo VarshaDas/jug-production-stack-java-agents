@@ -9,6 +9,7 @@ import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.ToolCallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.context.annotation.Bean;
@@ -56,6 +57,11 @@ public class ToolSearchConfig {
      * registration so only toolSearchTool is sent initially. Discovered tools
      * are expanded into the context on subsequent rounds.
      */
+    // NOTE: This uses the community 1.0.x line for Spring Boot 3, wiring the
+    // advisor manually below. In Spring AI 2.0.0 GA the Tool Search Tool is now
+    // core — add org.springframework.ai:spring-ai-starter-tool-search-advisor
+    // and enable it with a single property, no manual wiring:
+    //     spring.ai.chat.client.tool-search-advisor.enabled=true
     @Bean
     public ChatClient chatClientWithTST(ChatModel chatModel, ToolSearcher toolSearcher) {
         return ChatClient.builder(chatModel)
@@ -94,7 +100,28 @@ public class ToolSearchConfig {
 
                 log.info(">>> Tools in scope ({}): {}", tools.size(), tools);
             }
-            return chain.nextCall(request);
+
+            ChatClientResponse response = chain.nextCall(request);
+
+            // Log the assistant message this round returned: either the tool
+            // calls it requested, or the text it produced. This makes each step
+            // of the discover -> call -> answer loop visible in the logs.
+            if (response.chatResponse() != null
+                    && response.chatResponse().getResult() != null
+                    && response.chatResponse().getResult().getOutput() instanceof AssistantMessage msg) {
+
+                if (msg.getToolCalls() != null && !msg.getToolCalls().isEmpty()) {
+                    msg.getToolCalls().forEach(tc ->
+                            log.info("    ↳ assistant wants to call: {}({})", tc.name(), tc.arguments()));
+                }
+                if (msg.getText() != null && !msg.getText().isBlank()) {
+                    String text = msg.getText().strip();
+                    String preview = text.length() > 120 ? text.substring(0, 120) + "…" : text;
+                    log.info("    ↳ assistant text: {}", preview);
+                }
+            }
+
+            return response;
         }
     }
 }

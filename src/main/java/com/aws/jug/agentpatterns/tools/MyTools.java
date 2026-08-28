@@ -50,7 +50,7 @@ public class MyTools {
         return "Message sent to Slack channel #" + channel + ".";
     }
 
-    @Tool(description = "Get the current stock price for a given ticker symbol")
+    @Tool(description = "Look up the latest share price on the stock market by ticker symbol")
     public String getStockPrice(String ticker) {
         return "Stock price for " + ticker + " is $142.30.";
     }
@@ -85,7 +85,7 @@ public class MyTools {
         return "Restaurants near " + location + " serving " + cuisine + ": Resto A, Resto B.";
     }
 
-    @Tool(description = "Get the traffic conditions for a route between two locations")
+    @Tool(description = "Report road congestion and driving delays along a route between two places")
     public String getTrafficConditions(String origin, String destination) {
         return "Traffic from " + origin + " to " + destination + " is moderate, 25 min delay.";
     }
@@ -95,7 +95,7 @@ public class MyTools {
         return "Available parking near " + address + ": Lot A (5 spots), Lot B (2 spots).";
     }
 
-    @Tool(description = "Get the current cryptocurrency price for a given coin symbol")
+    @Tool(description = "Look up the live trading value of a cryptocurrency coin by symbol")
     public String getCryptoPrice(String coinSymbol) {
         return "Price of " + coinSymbol + " is $62,400.";
     }
@@ -120,7 +120,7 @@ public class MyTools {
         return "Domain " + domain + " is available for registration.";
     }
 
-    @Tool(description = "Get the current UV index for a given location")
+    @Tool(description = "Report the ultraviolet radiation exposure level for sun-safety planning")
     public String getUvIndex(String location) {
         return "UV index in " + location + " is 4 (moderate).";
     }
@@ -150,12 +150,12 @@ public class MyTools {
         return "Latest version of " + packageName + " is 3.2.1.";
     }
 
-    @Tool(description = "Convert a temperature value from one unit to another (Celsius, Fahrenheit, Kelvin)")
+    @Tool(description = "Convert a numeric measurement between Celsius, Fahrenheit and Kelvin units")
     public String convertTemperature(String value, String fromUnit, String toUnit) {
         return value + "°" + fromUnit + " = converted value in °" + toUnit + ".";
     }
 
-    @Tool(description = "Get the air quality index for a given city")
+    @Tool(description = "Report pollution and air cleanliness readings for a named city")
     public String getAirQualityIndex(String city) {
         return "Air quality index in " + city + " is 42 (Good).";
     }

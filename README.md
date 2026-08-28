@@ -68,6 +68,8 @@ The baseline stays pinned at `Tools in scope (28)` on every round.
 | Spring AI | 1.1.2 |
 | tool-search-tool | 1.0.1 (`org.springaicommunity`) |
 | tool-searcher-lucene | 1.0.1 (`org.springaicommunity`) |
+
+> **Version note:** This uses the community 1.0.x line for Spring Boot 3. In Spring AI 2.0.0 GA the Tool Search Tool is now core — `org.springframework.ai:spring-ai-starter-tool-search-advisor` — enabled with a single `spring.ai.chat.client.tool-search-advisor.enabled=true` property (no manual advisor wiring needed).
 | Amazon Bedrock Converse | region `us-east-1` |
 | Model | `us.anthropic.claude-sonnet-4-20250514-v1:0` |
 | Port | 8085 |

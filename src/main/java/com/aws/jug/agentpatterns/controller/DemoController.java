@@ -76,6 +76,7 @@ public class DemoController {
         result.put("totalTokens",      counter.getTotalTokens());
         result.put("promptTokens",     counter.getPromptTokens());
         result.put("completionTokens", counter.getCompletionTokens());
+        result.put("requests",         counter.getRequests());
         result.put("toolsInScope",     counter.getToolsInScope());
         result.put("toolsCalled",      counter.getToolsCalled());
         return result;
