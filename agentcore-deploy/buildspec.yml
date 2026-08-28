@@ -1,0 +1,15 @@
+version: 0.2
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
+  build:
+    commands:
+      - echo Building arm64 image...
+      - docker build -t $ECR_URI:latest .
+  post_build:
+    commands:
+      - echo Pushing image to ECR...
+      - docker push $ECR_URI:latest
+      - echo Done.
