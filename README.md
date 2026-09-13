@@ -8,7 +8,7 @@ Runnable Spring AI demos on **Amazon Bedrock** that accompany the talk. Each dem
 
 | Demo | Folder | Pattern | Stack |
 |---|---|---|---|
-| **1. Dynamic Tool Discovery** | `/` (root) | Tool Search Tool — discover tools on demand instead of sending all upfront | Spring Boot 3.5 / Spring AI 1.1.2 (Maven) |
+| **1. Dynamic Tool Discovery** | `/` (root) | Tool Search Tool — discover tools on demand instead of sending all upfront | Spring Boot 4.0 / Spring AI 2.0.1 (Maven) |
 | **2. One-Click Deploy** | [`agentcore-deploy/`](agentcore-deploy/) | `@AgentCoreInvocation` — a plain Spring AI agent, deploy-ready for Amazon Bedrock AgentCore | Spring Boot 4.1 / Spring AI 2.0.0 (Gradle) |
 
 The two demos are **independent projects** on different stacks (the AgentCore SDK requires Spring Boot 4.x / Spring AI 2.0.0), so they live side by side rather than as one build. Demo 2 has its own [README](agentcore-deploy/README.md) and [run sheet](agentcore-deploy/DEMO.md).
@@ -40,36 +40,54 @@ Only the tools the model actually needs ever enter the context window.
 
 ---
 
-## Two Endpoints
+## Three Endpoints
 
-| Endpoint | Behaviour | Tokens |
+| Endpoint | Behaviour | Tools in scope |
 |---|---|---|
-| `POST /chat/all-tools` | All 28 tool definitions sent every round | High |
-| `POST /chat/tst` | Model discovers tools on demand via Lucene search | Low |
+| `POST /chat/no-tools` | No tools at all — the token floor | 0 |
+| `POST /chat/all-tools` | All 28 tool definitions sent every round | 28 |
+| `POST /chat/tst` | Model discovers tools on demand via Lucene search | 3–4 |
 
 ---
 
 ## The Scenario
 
 **28 tools registered:**
-- 3 relevant: `weather`, `clothing`, `currentTime`
-- 25 dummies: `checkFlightStatus`, `bookHotel`, `sendSlackMessage`, `getStockPrice`, ... (noise)
+- Relevant to this scenario: `weather`, `getAirQualityIndex`, `getUvIndex`, `currentTime`
+- 20+ dummies: `checkFlightStatus`, `bookHotel`, `sendSlackMessage`, `getStockPrice`, ... (noise)
 
-**Prompt:**
+**Prompt** — note it names *no* tools; the model must work out what it needs:
 ```
-Help me plan what to wear today in Amsterdam.
-Please suggest clothing shops that are open right now.
+I have asthma and I want to go for a run outside in Bengaluru
+this afternoon. Is that a good idea?
 ```
+
+"asthma" implies air quality, "run outside this afternoon" implies weather.
+The tool data is Bengaluru-realistic (AQI 156 *Unhealthy*, UV index 9 *very
+high*), so the model has to combine signals to give a real answer.
 
 **Progressive discovery (visible in logs):**
 ```
-Round 1: Tools in scope (1)  → [toolSearchTool]           searches "weather"
-Round 2: Tools in scope (6)  → + weather (+ near matches) calls weather()
-Round 3: Tools in scope (8)  → + clothing                 calls clothing()
+Round 1: Tools in scope (1)  → [toolSearchTool]        searches for air quality
+Round 2: Tools in scope (3)  → + getAirQualityIndex    calls it
+Round 3: Tools in scope (4)  → + weather               calls it
 Final:   answer generated using only discovered tools
 ```
 
 The baseline stays pinned at `Tools in scope (28)` on every round.
+
+**Representative result** (same prompt, same answer quality):
+
+| | `/chat/all-tools` | `/chat/tst` |
+|---|---|---|
+| tools in scope | **28** | **4** |
+| totalTokens | ~6,800 | ~5,100 |
+
+> `toolsInScope` (28 vs 4) is the **stable** metric — it's deterministic and it
+> is the point of the pattern. The token delta varies run to run (roughly
+> 25–50%) because the model chooses how many search rounds to make, and
+> `totalTokens` is summed across rounds. The saving grows sharply once you pass
+> 50+ tools, where the upfront tool payload dwarfs the search overhead.
 
 ---
 
@@ -78,15 +96,25 @@ The baseline stays pinned at `Tools in scope (28)` on every round.
 | Component | Version |
 |---|---|
 | Java | 21 |
-| Spring Boot | 3.5.0 |
-| Spring AI | 1.1.2 |
-| tool-search-tool | 1.0.1 (`org.springaicommunity`) |
-| tool-searcher-lucene | 1.0.1 (`org.springaicommunity`) |
+| Spring Boot | 4.0.0 |
+| Spring AI | 2.0.1 |
+| Tool Search | `org.springframework.ai:spring-ai-starter-tool-search-advisor` (core) |
+| Tool index | `lucene` (keyword — no embedding model required) |
 | Amazon Bedrock Converse | region `us-east-1` |
 | Model | `us.anthropic.claude-sonnet-4-20250514-v1:0` |
 | Port | 8085 |
 
-> **Version note:** Demo 1 uses the community 1.0.x line for Spring Boot 3. In Spring AI 2.0.0 GA the Tool Search Tool is now core — `org.springframework.ai:spring-ai-starter-tool-search-advisor` — enabled with a single `spring.ai.chat.client.tool-search-advisor.enabled=true` property (no manual advisor wiring needed).
+> **Version note:** the Tool Search Tool is now **core** Spring AI (2.0+). It is
+> enabled entirely by properties — no manual advisor wiring:
+> ```properties
+> spring.ai.chat.client.tool-search-advisor.enabled=true
+> spring.ai.chat.client.tool-search-advisor.tool-index-type=lucene
+> spring.ai.chat.client.tool-search-advisor.max-results=5
+> spring.ai.chat.client.tool-search-advisor.reference-tool-name-accumulation=true
+> ```
+> `tool-index-type` also supports `vector` (semantic) and `regex`. This demo uses
+> `lucene` deliberately: keyword search needs no embedding model, so startup is
+> fast and has no model-download dependency.
 
 ---
 
@@ -114,21 +142,34 @@ App starts on **port 8085**.
 
 ## API
 
-### `POST /chat/all-tools` — baseline
+All three endpoints take the **same** prompt so the results are comparable.
+`prompt` is **required** — there is no built-in default. A missing or blank
+`prompt` returns HTTP 400.
+
 ```bash
+PROMPT="I have asthma and I want to go for a run outside in Bengaluru this afternoon. Is that a good idea?"
+
+# 1. No tools — token floor
+curl -s -X POST http://localhost:8085/chat/no-tools \
+  -H "Content-Type: application/json" \
+  -d "$(jq -n --arg p "$PROMPT" '{prompt:$p}')" | jq
+
+# 2. All 28 tools upfront — the baseline
 curl -s -X POST http://localhost:8085/chat/all-tools \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Help me plan what to wear today in Amsterdam. Please suggest clothing shops that are open right now."}' | jq
-```
+  -d "$(jq -n --arg p "$PROMPT" '{prompt:$p}')" | jq
 
-### `POST /chat/tst` — Tool Search Tool
-```bash
+# 3. Tool Search Tool — dynamic discovery
 curl -s -X POST http://localhost:8085/chat/tst \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Help me plan what to wear today in Amsterdam. Please suggest clothing shops that are open right now."}' | jq
+  -d "$(jq -n --arg p "$PROMPT" '{prompt:$p}')" | jq
 ```
 
-Both accept an optional `{"prompt": "..."}` body. Omit it (or send `{}`) to use the default Amsterdam prompt.
+Or just run all three at once:
+```bash
+./demo-curls.sh            # all three
+./demo-curls.sh tst        # one: no-tools | all-tools | tst
+```
 
 **Response shape:**
 ```json
@@ -153,12 +194,12 @@ Both accept an optional `{"prompt": "..."}` body. Omit it (or send `{}`) to use 
 ════════════════════════════════════════════════
   ENDPOINT: POST /chat/tst
   MODE    : Tool Search Tool — dynamic discovery
-  PROMPT  : Help me plan what to wear today in Amsterdam...
+  PROMPT  : I have asthma and I want to go for a run outside in Bengaluru...
 ════════════════════════════════════════════════
 >>> Tools in scope (1): [toolSearchTool]
->>> Tools in scope (6): [convertTemperature, getStockPrice, ... toolSearchTool, weather]
->>> Tools in scope (8): [clothing, ... toolSearchTool, weather]
-  RESULT  : totalTokens=2177 promptTokens=1877 completionTokens=300
+>>> Tools in scope (3): [getAirQualityIndex, currentTime, toolSearchTool]
+>>> Tools in scope (4): [getAirQualityIndex, currentTime, toolSearchTool, weather]
+  RESULT  : totalTokens=5100 promptTokens=4357 completionTokens=743
 ════════════════════════════════════════════════
 ```
 
@@ -172,11 +213,11 @@ src/main/java/com/aws/jug/agentpatterns/
 ├── tools/
 │   └── MyTools.java              # 3 relevant + 25 dummy @Tool methods
 ├── config/
-│   └── ToolSearchConfig.java     # LuceneToolSearcher, 2 ChatClients, ToolLoggingAdvisor
+│   └── ToolSearchConfig.java     # 3 ChatClients (no-tools / all-tools / TST), ToolLoggingAdvisor
 ├── advisor/
 │   └── TokenCounterAdvisor.java  # CallAdvisor tracking tokens + tools per request
 └── controller/
-    └── DemoController.java       # POST /chat/all-tools, POST /chat/tst
+    └── DemoController.java       # POST /chat/no-tools, /chat/all-tools, /chat/tst
 ```
 
 ---

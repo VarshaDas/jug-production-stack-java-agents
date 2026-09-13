@@ -1,16 +1,17 @@
 package com.aws.jug.agentpatterns.advisor;
 
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.springframework.ai.chat.client.ChatClientRequest;
 import org.springframework.ai.chat.client.ChatClientResponse;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisor;
 import org.springframework.ai.chat.client.advisor.api.CallAdvisorChain;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
-
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Reports AGGREGATE token usage and tools for a single HTTP request, matching
@@ -64,6 +65,16 @@ public class TokenCounterAdvisor implements CallAdvisor {
             if (opts.getToolCallbacks() != null) {
                 opts.getToolCallbacks().forEach(cb ->
                         toolsInScope.add(cb.getToolDefinition().name()));
+            }
+        }
+
+        // Capture tool calls from the conversation HISTORY on this request.
+        // After a tool round, the executed tool calls are carried back as
+        // AssistantMessages in the next request's message list. Scanning the
+        // history here catches calls the final response (pure prose) misses.
+        for (Message m : request.prompt().getInstructions()) {
+            if (m instanceof AssistantMessage am && am.getToolCalls() != null) {
+                am.getToolCalls().forEach(tc -> toolsCalled.add(tc.name()));
             }
         }
 

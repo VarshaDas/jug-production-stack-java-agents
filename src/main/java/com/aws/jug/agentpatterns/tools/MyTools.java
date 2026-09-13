@@ -18,7 +18,7 @@ public class MyTools {
     public String weather(
             String location,
             @ToolParam(description = "ISO date-time string YYYY-MM-DDTHH:mm") String atTime) {
-        return "The weather in " + location + " at " + atTime + " is sunny with 15°C.";
+        return "The weather in " + location + " at " + atTime + " is partly cloudy with 28°C and high humidity.";
     }
 
     @Tool(description = "Get clothing shop names for a given location that are open at a given time")
@@ -30,7 +30,7 @@ public class MyTools {
 
     @Tool(description = "Get the current date and time for a given location")
     public String currentTime(String location) {
-        return "Current date and time in " + location + " is 2025-06-04T10:30:00.";
+        return "Current date and time in " + location + " is 2025-06-04T15:30:00 IST.";
     }
 
     // ── Dummy / noise tools (25) ──────────────────────────────────────────────
@@ -87,7 +87,7 @@ public class MyTools {
 
     @Tool(description = "Report road congestion and driving delays along a route between two places")
     public String getTrafficConditions(String origin, String destination) {
-        return "Traffic from " + origin + " to " + destination + " is moderate, 25 min delay.";
+        return "Traffic from " + origin + " to " + destination + " is heavy, 45 min delay.";
     }
 
     @Tool(description = "Search for available parking spots near a given address")
@@ -122,7 +122,7 @@ public class MyTools {
 
     @Tool(description = "Report the ultraviolet radiation exposure level for sun-safety planning")
     public String getUvIndex(String location) {
-        return "UV index in " + location + " is 4 (moderate).";
+        return "UV index in " + location + " is 9 (very high) — sun protection strongly advised.";
     }
 
     @Tool(description = "Search for job postings by role title and location")
@@ -157,6 +157,6 @@ public class MyTools {
 
     @Tool(description = "Report pollution and air cleanliness readings for a named city")
     public String getAirQualityIndex(String city) {
-        return "Air quality index in " + city + " is 42 (Good).";
+        return "Air quality index in " + city + " is 156 (Unhealthy) — sensitive groups should limit outdoor exertion.";
     }
 }
