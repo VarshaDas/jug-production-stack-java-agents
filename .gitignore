@@ -31,7 +31,21 @@ spring-pid
 # Kiro AI workspace files (local only)
 .kiro/
 
+# Python virtualenvs (streamlit explainer)
+.venv/
+__pycache__/
+*.pyc
+
+# Scratch / local notebooks
+scratch.ijnb
+
 # Personal prep / talk material (local only — not part of the codebase)
 TALKING-POINTS.md
 YOUTUBE-SHORT-SCRIPT.md
 ENGINEERING-CHALLENGES.md
+YOUTUBE-SHORT-SCRIPT-TST-STEPBYSTEP.md
+SCRIPT-TELEPROMPTER.md
+SCRIPT-VIDEO-EDITOR.md
+KIRO-FEEDBACK-HARVEST-PROMPT.md
+VECTOR-VS-LUCENE.md
+DIFF-FROM-BLOG.md
