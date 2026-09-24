@@ -2,8 +2,16 @@
 
 > **Design Patterns for AI Agents — A Java Developer's Guide** (Bangalore JUG)
 
-Runnable Spring AI demos that accompany the talk. Each demo showcases one
-production pattern for building and shipping Java AI agents.
+Three small, runnable Spring AI projects that each demonstrate one production
+pattern for building and shipping Java AI agents. Pick a folder, follow its
+README, run it in a minute.
+
+- **Wasting tokens on tools?** → Demo 1 discovers tools on demand instead of
+  sending them all every request.
+- **Ready to ship an agent?** → Demo 2 deploys a Spring AI agent to Amazon
+  Bedrock AgentCore.
+- **Want your agent to expose tools to *other* clients?** → Demo 3 is an MCP
+  server with tools, resources, prompts and interactive UIs.
 
 ## Demos in this repo
 

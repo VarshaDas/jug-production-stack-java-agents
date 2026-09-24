@@ -156,20 +156,29 @@ Or just run all three at once:
 ./demo-curls.sh tst        # one: no-tools | all-tools | tst
 ```
 
-**Response shape:**
+**Response shape** (from `/chat/tst`):
 ```json
 {
-  "answer": "Based on the sunny 15°C weather...",
-  "totalTokens": 7321,
-  "promptTokens": 6638,
-  "completionTokens": 683,
-  "requests": 6,
-  "toolsInScope": ["toolSearchTool", "weather", "currentTime", "clothing", "getOpeningHours"],
-  "toolsCalled": ["..."]
+  "answer": "With an AQI of 156 (Unhealthy) in Bengaluru, running outside isn't a good idea for someone with asthma...",
+  "totalTokens": 5100,
+  "promptTokens": 4357,
+  "completionTokens": 743,
+  "requests": 4,
+  "toolsInScope": ["toolSearchTool", "getAirQualityIndex", "currentTime", "weather"],
+  "toolsCalled": ["getAirQualityIndex", "weather"]
 }
 ```
 
-> **On the numbers:** `totalTokens` is the **aggregate across all LLM rounds** (matching the Spring AI blog's methodology) — the true billed cost of the whole interaction, since each round resends conversation history. `requests` is the number of LLM round-trips. Compare TST vs. the all-tools baseline *within this demo* rather than against the blog's table (different models/accounts give different absolute numbers). `toolsInScope` is the distinct set of tools that ever entered context — far fewer than the 28 the baseline sends every round.
+**Reading the numbers:**
+- **`toolsInScope`** — the distinct tools that ever entered the model's context.
+  This is the headline: **4 with TST vs 28 for the baseline**. It's deterministic,
+  so it's the number to trust.
+- **`totalTokens`** — summed across *all* LLM rounds (each round resends the
+  conversation), so it reflects the true billed cost of the whole interaction.
+  It varies run to run because the model decides how many search rounds to make —
+  compare TST vs the baseline *within the same run*, not against a fixed figure.
+- **`requests`** — number of LLM round-trips.
+- **`toolsCalled`** — the tools the model actually invoked (a subset of scope).
 
 ---
 
@@ -209,24 +218,34 @@ src/main/java/com/aws/jug/agentpatterns/
 
 ## Key Design Notes
 
-- **Don't set `internalToolExecutionEnabled(false)`.** `ToolSearchToolCallAdvisor` extends `ToolCallAdvisor`, which owns the recursive execution loop. That flag breaks the loop.
-- **`maxResults(5)`** — Lucene returns the top 5 matches per search; plus `toolSearchTool` itself = 6 tools in scope after the first search. Enough headroom for the right tool to surface even when it isn't ranked first.
-- **`ChatClient.CallResponseSpec` is single-use.** Call `.content()` once — don't also call `.chatResponse()` on the same spec, or it fires a second LLM call.
+- **Tool Search is enabled by properties, not code.** With
+  `spring.ai.chat.client.tool-search-advisor.enabled=true`, the advisor is
+  auto-registered — no manual wiring. See `application.properties`.
+- **The baseline client opts out of it.** Because the advisor is auto-registered
+  globally, `/chat/all-tools` and `/chat/no-tools` are built from `ChatModel`
+  directly (not the shared `ChatClient.Builder`), so the search advisor doesn't
+  leak in and the "all tools upfront" comparison stays honest.
+- **`max-results=5`** — Lucene returns the top 5 matches per search; plus the
+  search tool itself. Enough headroom for the right tool to surface even when it
+  isn't ranked first.
+- **The TST endpoint needs a conversation id.** The advisor scopes discovered
+  tools per session via `ChatMemory.CONVERSATION_ID`; the controller sets a fresh
+  UUID per request so each call is an independent, clean measurement.
 
 ---
 
 ## About This Talk
 
-Part of **"Design Patterns for AI Agents — A Java Developer's Guide"** (Bangalore JUG). This repo holds two runnable demos: **Dynamic Tool Discovery** (above) and **One-Click Deploy** with the Spring AI AgentCore SDK (see [`agentcore-deploy/`](agentcore-deploy/)). The talk also covers the Human-in-the-Loop (Ask Before Acting) pattern.
+Part of **"Design Patterns for AI Agents — A Java Developer's Guide"** (Bangalore
+JUG). See the [repo root](../README.md) for the other demos.
 
 ---
 
 ## References
 
+- [Spring AI — Dynamic Tool Discovery guide](https://docs.spring.io/spring-ai/reference/guides/dynamic-tool-search.html)
 - [Spring AI Tool Search Tool blog](https://spring.io/blog/2025/12/11/spring-ai-tool-search-tools-tzolov)
-- [spring-ai-tool-search-tool (GitHub, v1.0.x)](https://github.com/spring-ai-community/spring-ai-tool-search-tool/tree/1.0.x)
 - [Anthropic — Advanced Tool Use](https://www.anthropic.com/engineering/advanced-tool-use)
-- [Spring AI Recursive Advisors](https://docs.spring.io/spring-ai/reference/api/advisors-recursive.html)
 
 ---
 
